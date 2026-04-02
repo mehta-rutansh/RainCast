@@ -19,50 +19,59 @@ st.set_page_config(
 st.markdown("""
 <style>
 
+/* Let Streamlit control base theme */
 .stApp{
-background-color:#f4f6fb;
-font-family: "Segoe UI", sans-serif;
+    font-family: "Segoe UI", sans-serif;
 }
 
+/* Titles */
 .main-title{
-font-size:40px;
-font-weight:700;
-color:#1f2937;
+    font-size:40px;
+    font-weight:700;
 }
 
+/* City title */
 .city-title{
-font-size:26px;
-font-weight:600;
-margin-top:10px;
-color:#374151;
+    font-size:26px;
+    font-weight:600;
+    margin-top:10px;
+}
+
+/* Weather cards (theme adaptive) */
+.weather-card{
+    background: var(--background-color);
+    padding:20px;
+    border-radius:14px;
+    text-align:center;
+    border: 1px solid rgba(128,128,128,0.2);
+}
+
+/* Temperature highlight */
+.temp-big{
+    font-size:36px;
+    font-weight:700;
+    color: var(--primary-color);
+}
+
+/* Condition text */
+.condition{
+    font-size:18px;
+    margin-top:5px;
+}
+
+/* Charts container */
+[data-testid="stPlotlyChart"]{
+    border-radius:18px;
+    margin-bottom:20px;
 }
 
 .weather-card{
-background:white;
-padding:20px;
-border-radius:14px;
-text-align:center;
-box-shadow:0px 4px 15px rgba(0,0,0,0.08);
-}
-
-.temp-big{
-font-size:36px;
-font-weight:700;
-color:#2563eb;
-}
-
-.condition{
-font-size:18px;
-margin-top:5px;
-color:#374151;
-}
-
-[data-testid="stPlotlyChart"]{
-background:white;
-padding:20px;
-border-radius:18px;
-box-shadow:0px 4px 18px rgba(0,0,0,0.08);
-margin-bottom:20px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    padding:20px;
+    border-radius:16px;
+    text-align:center;
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
 </style>
