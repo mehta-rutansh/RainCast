@@ -4,26 +4,14 @@ import pandas as pd
 import plotly.express as px
 from geopy.geocoders import Nominatim
 
-# ---------------------------------------------------
-# PAGE CONFIG
-# ---------------------------------------------------
-st.set_page_config(
-    page_title="Weather Intelligence Dashboard",
-    layout="wide"
-)
+st.set_page_config(page_title="Weather Intelligence", layout="wide")
 
-# ---------------------------------------------------
-# TITLE
-# ---------------------------------------------------
 st.title("🌍 Weather Intelligence Dashboard")
 
-city_input = st.text_input(
-    "🔍 Enter City (or multiple cities separated by comma)",
-    placeholder="Ahmedabad, London, New York"
-)
+city = st.text_input("🔍 Enter City", placeholder="Ahmedabad")
 
 # ---------------------------------------------------
-# STRICT VALIDATION (FIXED PROPERLY)
+# STRICT VALIDATION (FINAL FIX)
 # ---------------------------------------------------
 def get_coordinates(city):
     geolocator = Nominatim(user_agent="weather_app")
@@ -34,33 +22,37 @@ def get_coordinates(city):
         exactly_one=True
     )
 
-    if location is None:
-        return None, None
+    if not location:
+        return None, None, None
 
     address = location.raw.get("address", {})
-
-    # ✅ MUST be a real city-like entity
-    valid_keys = ["city", "town", "village"]
-
-    if not any(k in address for k in valid_keys):
-        return None, None
-
-    # ✅ Ensure strong match (IMPORTANT FIX)
     display_name = location.raw.get("display_name", "").lower()
 
-    if city.lower() not in display_name:
-        return None, None
+    # ✅ Only accept real cities
+    if not any(k in address for k in ["city", "town"]):
+        return None, None, None
 
-    return location.latitude, location.longitude
+    # ✅ STRICT MATCH (THIS FIXES xyz)
+    city_clean = city.strip().lower()
+
+    if city_clean not in display_name:
+        return None, None, None
+
+    # ✅ Reject weak matches (low importance places)
+    if location.raw.get("importance", 0) < 0.5:
+        return None, None, None
+
+    return location.latitude, location.longitude, address
 
 # ---------------------------------------------------
-# WEATHER DATA
+# WEATHER API
 # ---------------------------------------------------
 def get_weather(lat, lon):
     url = (
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}"
         f"&longitude={lon}"
+        "&current_weather=true"
         "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max"
         "&timezone=auto"
     )
@@ -74,140 +66,119 @@ def get_weather(lat, lon):
         "rain_prob": data["daily"]["precipitation_probability_max"]
     })
 
-    return df.head(7)
+    return data["current_weather"], df.head(7)
 
 # ---------------------------------------------------
-# MAIN LOGIC
+# NEARBY CITIES (STATIC INTELLIGENCE)
 # ---------------------------------------------------
-if city_input:
+nearby_map = {
+    "ahmedabad": ["Surat", "Vadodara", "Rajkot"],
+    "london": ["Manchester", "Birmingham", "Leeds"],
+    "new york": ["Boston", "Philadelphia", "Newark"]
+}
 
-    cities = [c.strip() for c in city_input.split(",")]
+# ---------------------------------------------------
+# MAIN
+# ---------------------------------------------------
+if city:
 
-    valid_data = []
-    invalid_cities = []
+    lat, lon, address = get_coordinates(city)
 
-    for city in cities:
-        lat, lon = get_coordinates(city)
-
-        if lat is None:
-            invalid_cities.append(city)
-        else:
-            df = get_weather(lat, lon)
-            df["city"] = city.title()
-            valid_data.append(df)
-
-    # ❌ SHOW ERROR IF INVALID
-    if invalid_cities:
-        st.error(f"❌ Invalid city(s): {', '.join(invalid_cities)}")
-
-    if not valid_data:
+    if lat is None:
+        st.error("❌ Enter a valid city name (No random text allowed)")
         st.stop()
 
-    df_all = pd.concat(valid_data)
+    current, df = get_weather(lat, lon)
 
 # ---------------------------------------------------
-# TABS (CLEAN DASHBOARD STRUCTURE)
+# HOME PAGE (CURRENT + FORECAST)
+# ---------------------------------------------------
+    st.subheader(f"📍 {city.title()}")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("🌡 Temp", f"{current['temperature']} °C")
+    c2.metric("💨 Wind", f"{current['windspeed']} km/h")
+    c3.metric("🧭 Direction", f"{current['winddirection']}°")
+
+    st.divider()
+
+    st.subheader("7-Day Forecast")
+
+    cols = st.columns(7)
+
+    for i in range(len(df)):
+        with cols[i]:
+            st.metric(
+                df.loc[i, "date"],
+                f"{df.loc[i, 'temp_max']}°C",
+                f"Rain {df.loc[i, 'rain_prob']}%"
+            )
+
+# ---------------------------------------------------
+# TABS
 # ---------------------------------------------------
     tab1, tab2, tab3 = st.tabs([
-        "📊 Forecast Dashboard",
-        "📈 Data Insights (EDA)",
-        "🌍 Multi-City Comparison"
+        "📊 Analytics",
+        "📈 EDA",
+        "🌍 Nearby Comparison"
     ])
 
 # ---------------------------------------------------
-# TAB 1 → FORECAST
+# ANALYTICS
 # ---------------------------------------------------
     with tab1:
 
-        st.subheader("Temperature Trend")
-
-        fig = px.line(
-            df_all,
-            x="date",
-            y="temp_max",
-            color="city",
-            markers=True,
-            height=400
-        )
-
+        fig = px.line(df, x="date", y=["temp_max","temp_min"], height=350)
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("Rain Probability")
-
-        rain = px.bar(
-            df_all,
-            x="date",
-            y="rain_prob",
-            color="city",
-            barmode="group",
-            height=400
-        )
-
+        rain = px.bar(df, x="date", y="rain_prob", height=350)
         st.plotly_chart(rain, use_container_width=True)
 
 # ---------------------------------------------------
-# TAB 2 → EDA
+# EDA
 # ---------------------------------------------------
     with tab2:
 
-        st.subheader("Summary Metrics")
+        df["temp_range"] = df["temp_max"] - df["temp_min"]
 
-        col1, col2, col3 = st.columns(3)
+        st.metric("Avg Temp", f"{df['temp_max'].mean():.1f} °C")
 
-        col1.metric("Avg Max Temp", f"{df_all['temp_max'].mean():.1f} °C")
-        col2.metric("Avg Min Temp", f"{df_all['temp_min'].mean():.1f} °C")
-        col3.metric("Avg Rain", f"{df_all['rain_prob'].mean():.0f} %")
-
-        st.divider()
-
-        st.subheader("Temperature Distribution")
-
-        hist = px.histogram(
-            df_all,
-            x="temp_max",
-            color="city",
-            height=350
-        )
-
+        hist = px.histogram(df, x="temp_max", height=300)
         st.plotly_chart(hist, use_container_width=True)
 
-        st.subheader("Temp vs Rain Relationship")
-
-        scatter = px.scatter(
-            df_all,
-            x="temp_max",
-            y="rain_prob",
-            color="city",
-            size="rain_prob",
-            height=350
-        )
-
+        scatter = px.scatter(df, x="temp_max", y="rain_prob", height=300)
         st.plotly_chart(scatter, use_container_width=True)
 
 # ---------------------------------------------------
-# TAB 3 → MULTI CITY
+# NEARBY COMPARISON
 # ---------------------------------------------------
     with tab3:
 
-        st.subheader("City Comparison")
+        city_key = city.lower()
 
-        compare = px.bar(
-            df_all.groupby("city")[["temp_max","temp_min"]].mean().reset_index(),
-            x="city",
-            y=["temp_max","temp_min"],
-            barmode="group",
-            height=400
-        )
+        if city_key in nearby_map:
 
-        st.plotly_chart(compare, use_container_width=True)
+            all_cities = [city.title()] + nearby_map[city_key]
 
-        st.subheader("Rain Comparison")
+            data_list = []
 
-        rain_cmp = px.bar(
-            df_all.groupby("city")["rain_prob"].mean().reset_index(),
-            x="city",
-            y="rain_prob",
-            height=400
-        )
+            for c in all_cities:
+                lat, lon, _ = get_coordinates(c)
+                _, d = get_weather(lat, lon)
+                d["city"] = c
+                data_list.append(d)
 
-        st.plotly_chart(rain_cmp, use_container_width=True)
+            df_all = pd.concat(data_list)
+
+            compare = px.line(
+                df_all,
+                x="date",
+                y="temp_max",
+                color="city",
+                height=400
+            )
+
+            st.plotly_chart(compare, use_container_width=True)
+
+        else:
+            st.info("Nearby comparison not available for this city yet")
