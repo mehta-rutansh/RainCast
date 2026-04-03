@@ -123,115 +123,68 @@ if city:
         "🌍 Nearby Comparison"
     ])
 
-# ---------------------------------------------------
-# ANALYTICS
-# ---------------------------------------------------
-with tab1:
+    # ---------------------------------------------------
+    # ANALYTICS
+    # ---------------------------------------------------
+    with tab1:
 
-    st.subheader("Temperature Trend")
+        st.subheader("Temperature Trend")
 
-    fig = px.line(df, x="date", y=["temp_max","temp_min"], height=350)
-    st.plotly_chart(fig, use_container_width=True)
+        fig = px.line(df, x="date", y=["temp_max","temp_min"], height=350)
+        st.plotly_chart(fig, use_container_width=True)
 
-    # 🔥 NEW: Temperature Range Trend (VERY INSIGHTFUL)
-    df["temp_range"] = df["temp_max"] - df["temp_min"]
+        df["temp_range"] = df["temp_max"] - df["temp_min"]
 
-    st.subheader("Daily Temperature Variation")
+        st.subheader("Daily Temperature Variation")
 
-    range_chart = px.area(
-        df,
-        x="date",
-        y="temp_range",
-        title="Temperature Fluctuation (Day vs Night)",
-        height=300
-    )
-    st.plotly_chart(range_chart, use_container_width=True)
+        range_chart = px.area(df, x="date", y="temp_range", height=300)
+        st.plotly_chart(range_chart, use_container_width=True)
 
-    # 🔥 NEW: Rain + Temp Combined Insight
-    st.subheader("Rain vs Temperature Pattern")
+        st.subheader("Rain vs Temperature Pattern")
 
-    combo = px.scatter(
-        df,
-        x="temp_max",
-        y="rain_prob",
-        size="temp_range",
-        trendline="ols",
-        title="Does Higher Temperature Affect Rain?",
-        height=300
-    )
-    st.plotly_chart(combo, use_container_width=True)
+        combo = px.scatter(
+            df,
+            x="temp_max",
+            y="rain_prob",
+            size="temp_range",
+            trendline="ols",
+            height=300
+        )
+        st.plotly_chart(combo, use_container_width=True)
 
-# ---------------------------------------------------
-# EDA
-# ---------------------------------------------------
-with tab2:
+    # ---------------------------------------------------
+    # EDA
+    # ---------------------------------------------------
+    with tab2:
 
-    st.subheader("📊 Summary Statistics")
+        st.subheader("📊 Summary Statistics")
+        st.dataframe(df.describe(), use_container_width=True)
 
-    st.dataframe(df.describe(), use_container_width=True)
+        st.subheader("🔥 Weather Extremes")
 
-    # 🔥 NEW: Extremes Detection
-    st.subheader("🔥 Weather Extremes")
+        hottest_day = df.loc[df["temp_max"].idxmax()]
+        coldest_day = df.loc[df["temp_min"].idxmin()]
+        rainiest_day = df.loc[df["rain_prob"].idxmax()]
 
-    hottest_day = df.loc[df["temp_max"].idxmax()]
-    coldest_day = df.loc[df["temp_min"].idxmin()]
-    rainiest_day = df.loc[df["rain_prob"].idxmax()]
+        col1, col2, col3 = st.columns(3)
 
-    col1, col2, col3 = st.columns(3)
+        col1.success(f"Hottest: {hottest_day['date']} ({hottest_day['temp_max']}°C)")
+        col2.info(f"Coldest: {coldest_day['date']} ({coldest_day['temp_min']}°C)")
+        col3.warning(f"Rainiest: {rainiest_day['date']} ({rainiest_day['rain_prob']}%)")
 
-    col1.success(f"Hottest Day: {hottest_day['date']} ({hottest_day['temp_max']}°C)")
-    col2.info(f"Coldest Day: {coldest_day['date']} ({coldest_day['temp_min']}°C)")
-    col3.warning(f"Highest Rain: {rainiest_day['date']} ({rainiest_day['rain_prob']}%)")
+        st.subheader("Temperature Distribution")
+        hist = px.histogram(df, x="temp_max", height=300)
+        st.plotly_chart(hist, use_container_width=True)
 
-    st.divider()
+        st.subheader("Rolling Trend")
+        df["rolling_temp"] = df["temp_max"].rolling(3).mean()
 
-    # 🔥 NEW: Distribution with Insight
-    st.subheader("Temperature Distribution")
+        rolling = px.line(df, x="date", y=["temp_max","rolling_temp"], height=300)
+        st.plotly_chart(rolling, use_container_width=True)
 
-    hist = px.histogram(df, x="temp_max", nbins=7, height=300)
-    st.plotly_chart(hist, use_container_width=True)
-
-    # 🔥 NEW: Rolling Average (VERY PROFESSIONAL)
-    st.subheader("Trend Smoothing (Rolling Avg)")
-
-    df["rolling_temp"] = df["temp_max"].rolling(3).mean()
-
-    rolling = px.line(
-        df,
-        x="date",
-        y=["temp_max", "rolling_temp"],
-        title="Actual vs Smoothed Temperature",
-        height=300
-    )
-
-    st.plotly_chart(rolling, use_container_width=True)
-
-    # 🔥 NEW: Volatility Score
-    st.subheader("🌡 Weather Stability Score")
-
-    volatility = df["temp_range"].std()
-
-    if volatility < 3:
-        st.success("Stable weather conditions")
-    elif volatility < 6:
-        st.warning("Moderate fluctuations expected")
-    else:
-        st.error("High temperature instability")
-
-    # 🔥 NEW: Smart Insight Engine
-    st.subheader("🧠 AI-like Insights")
-
-    if df["rain_prob"].mean() > 60:
-        st.warning("Consistent rain expected across the week")
-
-    if df["temp_max"].max() - df["temp_min"].min() > 15:
-        st.info("Large temperature swings between day and night")
-
-    if df["temp_max"].mean() > 30:
-        st.error("Overall hot weather trend detected")
-# ---------------------------------------------------
-# NEARBY COMPARISON
-# ---------------------------------------------------
+    # ---------------------------------------------------
+    # NEARBY COMPARISON
+    # ---------------------------------------------------
     with tab3:
 
         city_key = city.lower()
@@ -261,4 +214,4 @@ with tab2:
             st.plotly_chart(compare, use_container_width=True)
 
         else:
-            st.info("Nearby comparison not available for this city yet")
+            st.info("Nearby comparison not available")
