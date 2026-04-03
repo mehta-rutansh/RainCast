@@ -147,7 +147,6 @@ if city:
             x="temp_max",
             y="rain_prob",
             size="temp_range",
-            trendline="ols",
             height=300
         )
         st.plotly_chart(combo, use_container_width=True)
