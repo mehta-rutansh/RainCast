@@ -2,76 +2,79 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from geopy.geocoders import Nominatim
 
 # ---------------------------------------------------
 # PAGE CONFIG
 # ---------------------------------------------------
 st.set_page_config(
-    page_title="Global Weather Dashboard",
+    page_title="Weather Intelligence Dashboard",
     page_icon="🌤",
     layout="wide"
 )
 
 # ---------------------------------------------------
-# MODERN UI (THEME ADAPTIVE + MOBILE FRIENDLY)
+# PREMIUM UI (GLASSMORPHISM + CLEAN)
 # ---------------------------------------------------
 st.markdown("""
 <style>
 
-/* Main container spacing */
+/* Global spacing */
 .block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
+    padding: 2rem 3rem;
 }
 
-/* Titles */
+/* Title */
 .main-title{
     font-size:42px;
     font-weight:800;
-    letter-spacing: -1px;
+    letter-spacing:-1px;
+    margin-bottom:10px;
 }
 
-/* City title */
-.city-title{
-    font-size:26px;
-    font-weight:600;
-    margin-top:10px;
+/* Section spacing */
+.section{
+    margin-top:25px;
 }
 
-/* Weather Cards */
+/* Glass Card */
+.card{
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(14px);
+    border-radius:20px;
+    padding:20px;
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+/* Weather cards */
 .weather-card{
     background: rgba(255,255,255,0.06);
-    backdrop-filter: blur(12px);
-    padding:18px;
-    border-radius:18px;
+    border-radius:16px;
+    padding:15px;
     text-align:center;
-    border: 1px solid rgba(255,255,255,0.08);
-    transition: 0.3s;
+    transition:0.3s;
 }
 
 .weather-card:hover{
-    transform: translateY(-5px);
+    transform: translateY(-4px);
 }
 
-/* Temperature */
+/* Big temp */
 .temp-big{
-    font-size:34px;
+    font-size:30px;
     font-weight:700;
 }
 
-/* Plot rounding */
+/* Plot spacing */
 [data-testid="stPlotlyChart"]{
-    border-radius:16px;
+    margin-top:10px;
 }
 
-/* Mobile Optimization */
+/* Mobile */
 @media (max-width: 768px) {
     .main-title{
         font-size:28px;
-    }
-    .temp-big{
-        font-size:26px;
     }
 }
 
@@ -81,24 +84,31 @@ st.markdown("""
 # ---------------------------------------------------
 # TITLE
 # ---------------------------------------------------
-st.markdown('<div class="main-title">🌍 Global Weather Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🌍 Weather Intelligence Dashboard</div>', unsafe_allow_html=True)
 
 city = st.text_input("🔍 Enter City Name", placeholder="e.g., Ahmedabad, London, New York")
 
 # ---------------------------------------------------
-# GET COORDINATES (VALIDATION ADDED)
+# STRICT VALIDATION
 # ---------------------------------------------------
 def get_coordinates(city):
     geolocator = Nominatim(user_agent="weather_app")
-    location = geolocator.geocode(city)
+
+    location = geolocator.geocode(city, addressdetails=True)
 
     if location is None:
+        return None, None
+
+    address = location.raw.get("address", {})
+    valid_keys = ["city", "town", "village", "municipality"]
+
+    if not any(key in address for key in valid_keys):
         return None, None
 
     return location.latitude, location.longitude
 
 # ---------------------------------------------------
-# GET WEATHER DATA
+# WEATHER API
 # ---------------------------------------------------
 def get_weather(lat, lon):
 
@@ -111,10 +121,9 @@ def get_weather(lat, lon):
         "&timezone=auto"
     )
 
-    response = requests.get(url)
-    data = response.json()
+    data = requests.get(url).json()
 
-    daily = pd.DataFrame({
+    df = pd.DataFrame({
         "date": data["daily"]["time"],
         "temp_max": data["daily"]["temperature_2m_max"],
         "temp_min": data["daily"]["temperature_2m_min"],
@@ -122,48 +131,25 @@ def get_weather(lat, lon):
         "weathercode": data["daily"]["weathercode"]
     })
 
-    current = data["current_weather"]
-
-    return current, daily.head(7)
+    return data["current_weather"], df.head(7)
 
 # ---------------------------------------------------
-# WEATHER INTERPRETER
-# ---------------------------------------------------
-def interpret_weather(code):
-
-    if code == 0:
-        return "☀ Clear"
-    elif code in [1,2,3]:
-        return "🌤 Partly Cloudy"
-    elif code in [45,48]:
-        return "🌫 Fog"
-    elif code in [51,53,55,61,63,65,80,81,82]:
-        return "🌧 Rain"
-    elif code in [71,73,75]:
-        return "❄ Snow"
-    else:
-        return "☁ Cloudy"
-
-# ---------------------------------------------------
-# MAIN LOGIC
+# MAIN
 # ---------------------------------------------------
 if city:
 
     lat, lon = get_coordinates(city)
 
-    # ❌ INVALID CITY HANDLING
     if lat is None:
-        st.error("❌ Invalid city name. Please enter a real city (e.g., Ahmedabad, London).")
+        st.error("❌ Enter a valid city name (Ahmedabad, London, New York)")
         st.stop()
 
     current, df = get_weather(lat, lon)
 
-    st.markdown(f'<div class="city-title">📍 {city.title()}</div>', unsafe_allow_html=True)
-
 # ---------------------------------------------------
-# CURRENT WEATHER
+# TOP METRICS
 # ---------------------------------------------------
-    st.subheader("Current Weather")
+    st.markdown('<div class="section"></div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
 
@@ -171,117 +157,106 @@ if city:
     col2.metric("💨 Wind Speed", f"{current['windspeed']} km/h")
     col3.metric("🧭 Wind Direction", f"{current['winddirection']}°")
 
-    st.divider()
+# ---------------------------------------------------
+# MAP + FORECAST (CLEAN LAYOUT)
+# ---------------------------------------------------
+    st.markdown('<div class="section"></div>', unsafe_allow_html=True)
+
+    left, right = st.columns([1,2])
+
+# MAP
+    with left:
+        st.markdown("### 📍 Location Map")
+
+        map_fig = px.scatter_mapbox(
+            lat=[lat],
+            lon=[lon],
+            zoom=5,
+            height=300
+        )
+
+        map_fig.update_layout(
+            mapbox_style="open-street-map",
+            margin=dict(l=0,r=0,t=0,b=0)
+        )
+
+        st.plotly_chart(map_fig, use_container_width=True)
+
+# FORECAST
+    with right:
+        st.markdown("### 7-Day Forecast")
+
+        cols = st.columns(7)
+
+        for i in range(len(df)):
+            with cols[i]:
+                st.markdown(f"""
+                <div class="weather-card">
+                <b>{df.loc[i,'date']}</b><br>
+                <div class="temp-big">{df.loc[i,'temp_max']}°C</div>
+                Min {df.loc[i,'temp_min']}°C<br>
+                🌧 {df.loc[i,'rain_prob']}%
+                </div>
+                """, unsafe_allow_html=True)
 
 # ---------------------------------------------------
-# 7 DAY FORECAST
+# ANALYTICS
 # ---------------------------------------------------
-    st.subheader("7 Day Forecast")
+    st.markdown('<div class="section"></div>', unsafe_allow_html=True)
+    st.subheader("📊 Weather Analytics")
 
-    cols = st.columns(7)
+    col1, col2 = st.columns(2)
 
-    for i in range(len(df)):
+    with col1:
+        fig = px.line(df, x="date", y=["temp_max","temp_min"],
+                      markers=True, height=350)
+        st.plotly_chart(fig, use_container_width=True)
 
-        condition = interpret_weather(df.loc[i, "weathercode"])
-
-        with cols[i]:
-            st.markdown(f"""
-            <div class="weather-card">
-            <div><b>{df.loc[i,"date"]}</b></div>
-            <div class="temp-big">{df.loc[i,"temp_max"]}°C</div>
-            <div>Min {df.loc[i,"temp_min"]}°C</div>
-            <div>{condition}</div>
-            <div>🌧 {df.loc[i,"rain_prob"]}%</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.divider()
+    with col2:
+        rain = px.bar(df, x="date", y="rain_prob", height=350)
+        st.plotly_chart(rain, use_container_width=True)
 
 # ---------------------------------------------------
-# TABS
+# EDA SECTION
 # ---------------------------------------------------
-    tabs = st.tabs([
-        "📊 Forecast Dashboard",
-        "🌡 Temperature Analysis",
-        "📈 Data Insights (EDA)"
-    ])
+    st.markdown('<div class="section"></div>', unsafe_allow_html=True)
+    st.subheader("📈 Data Insights (EDA)")
 
-# ---------------------------------------------------
-# TAB 1
-# ---------------------------------------------------
-    with tabs[0]:
+    df["temp_range"] = df["temp_max"] - df["temp_min"]
 
-        col1, col2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
 
-        with col1:
-            fig = px.line(df, x="date", y=["temp_max","temp_min"], markers=True,
-                          title="Temperature Trend")
-            st.plotly_chart(fig, use_container_width=True)
+    c1.metric("Avg Max Temp", f"{df['temp_max'].mean():.1f} °C")
+    c2.metric("Avg Min Temp", f"{df['temp_min'].mean():.1f} °C")
+    c3.metric("Avg Rain", f"{df['rain_prob'].mean():.0f} %")
 
-        with col2:
-            rain_chart = px.bar(df, x="date", y="rain_prob",
-                                color="rain_prob",
-                                title="Rain Probability")
-            st.plotly_chart(rain_chart, use_container_width=True)
+# DISTRIBUTION + RELATION
+    col1, col2 = st.columns(2)
 
-# ---------------------------------------------------
-# TAB 2
-# ---------------------------------------------------
-    with tabs[1]:
-
-        df["temp_range"] = df["temp_max"] - df["temp_min"]
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            range_chart = px.bar(df, x="date", y="temp_range",
-                                 title="Daily Temperature Range")
-            st.plotly_chart(range_chart, use_container_width=True)
-
-        with col2:
-            compare_chart = px.bar(df, x="date",
-                                  y=["temp_max","temp_min"],
-                                  barmode="group",
-                                  title="Max vs Min Temperature")
-            st.plotly_chart(compare_chart, use_container_width=True)
-
-# ---------------------------------------------------
-# TAB 3 (EDA)
-# ---------------------------------------------------
-    with tabs[2]:
-
-        st.subheader("📊 Summary Metrics")
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric("Avg Max Temp", f"{df['temp_max'].mean():.1f} °C")
-        col2.metric("Avg Min Temp", f"{df['temp_min'].mean():.1f} °C")
-        col3.metric("Avg Rain Chance", f"{df['rain_prob'].mean():.0f} %")
-
-        st.divider()
-
-        st.subheader("Temperature Distribution")
-
-        hist = px.histogram(df, x="temp_max", nbins=7)
+    with col1:
+        hist = px.histogram(df, x="temp_max", height=300)
         st.plotly_chart(hist, use_container_width=True)
 
-        st.subheader("Relationship: Temp vs Rain")
-
+    with col2:
         scatter = px.scatter(df, x="temp_max", y="rain_prob",
-                             size=df["temp_max"] - df["temp_min"])
+                             size="temp_range", height=300)
         st.plotly_chart(scatter, use_container_width=True)
 
-        st.subheader("🧠 Key Insights")
+# ---------------------------------------------------
+# SMART INSIGHTS
+# ---------------------------------------------------
+    st.markdown('<div class="section"></div>', unsafe_allow_html=True)
+    st.subheader("🧠 Smart Insights")
 
-        if df["rain_prob"].mean() > 50:
-            st.info("High chances of rain this week 🌧")
-        else:
-            st.success("Mostly dry weather expected ☀")
+    if df["rain_prob"].mean() > 50:
+        st.info("🌧 High rainfall expected this week")
+    else:
+        st.success("☀ Mostly dry conditions")
 
-        if df["temp_max"].max() > 35:
-            st.warning("High temperature alert 🔥 Stay hydrated")
+    if df["temp_max"].max() > 35:
+        st.warning("🔥 Heat alert — stay hydrated")
 
 # ---------------------------------------------------
 # FOOTER
 # ---------------------------------------------------
-st.caption("Weather data provided by Open-Meteo")
+st.caption("Powered by Open-Meteo | Designed like a product 🚀")
