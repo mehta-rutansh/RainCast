@@ -186,7 +186,7 @@ if city:
     # ---------------------------------------------------
     with tab3:
 
-        city_key = city.lower()
+        city_key = address.get("city", "").lower()
 
         if city_key in nearby_map:
 
