@@ -29,8 +29,17 @@ def get_coordinates(city):
     display_name = location.raw.get("display_name", "").lower()
 
     # ✅ Only accept real cities
-    if not any(k in address for k in ["city", "town"]):
-        return None, None, None
+    valid_keys = [
+    "city",
+    "town",
+    "village",
+    "municipality",
+    "county",
+    "state_district"
+]
+
+if not any(k in address for k in valid_keys):
+    return None, None, None
 
     # ✅ STRICT MATCH (THIS FIXES xyz)
     city_clean = city.strip().lower()
