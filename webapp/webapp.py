@@ -28,31 +28,30 @@ def get_coordinates(city):
     address = location.raw.get("address", {})
     display_name = location.raw.get("display_name", "").lower()
 
-    # ✅ Only accept real cities
+    # ✅ VALID CITY TYPES (FIXED INDENTATION)
     valid_keys = [
-    "city",
-    "town",
-    "village",
-    "municipality",
-    "county",
-    "state_district"
-]
+        "city",
+        "town",
+        "village",
+        "municipality",
+        "county",
+        "state_district"
+    ]
 
-if not any(k in address for k in valid_keys):
-    return None, None, None
+    if not any(k in address for k in valid_keys):
+        return None, None, None
 
-    # ✅ STRICT MATCH (THIS FIXES xyz)
+    # ✅ STRICT MATCH
     city_clean = city.strip().lower()
 
     if city_clean not in display_name:
         return None, None, None
 
-    # ✅ Reject weak matches (low importance places)
-    if location.raw.get("importance", 0) < 0.5:
+    # ✅ RELAXED IMPORTANCE (for Indian cities)
+    if location.raw.get("importance", 0) < 0.4:
         return None, None, None
 
     return location.latitude, location.longitude, address
-
 # ---------------------------------------------------
 # WEATHER API
 # ---------------------------------------------------
