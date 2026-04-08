@@ -145,7 +145,7 @@ tab1, tab2, tab3 = st.tabs([
     # ---------------------------------------------------
     # ANALYTICS
     # ---------------------------------------------------
-    with tab1:
+with tab1:
 
         st.subheader("Temperature Trend")
 
@@ -173,7 +173,7 @@ tab1, tab2, tab3 = st.tabs([
     # ---------------------------------------------------
     # EDA
     # ---------------------------------------------------
-    with tab2:
+with tab2:
 
         st.subheader("📊 Summary Statistics")
         st.dataframe(df.describe(), use_container_width=True)
@@ -203,7 +203,7 @@ tab1, tab2, tab3 = st.tabs([
     # ---------------------------------------------------
     # NEARBY COMPARISON
     # ---------------------------------------------------
-    with tab3:
+with tab3:
 
         st.subheader("🌍 Nearby Cities Comparison")
 
