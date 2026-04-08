@@ -256,46 +256,46 @@ with tab3:
         )
 
         st.plotly_chart(compare, use_container_width=True)
-    st.subheader("🗺 Nearby Cities Map")
+#     st.subheader("🗺 Nearby Cities Map")
 
-map_data = []
+# map_data = []
 
-for c in cities_to_compare:
+# for c in cities_to_compare:
 
-    lat2, lon2 = get_coordinates_relaxed(c)
+#     lat2, lon2 = get_coordinates_relaxed(c)
 
-    if lat2 is None:
-        continue
+#     if lat2 is None:
+#         continue
 
-    map_data.append({
-        "city": c,
-        "lat": lat2,
-        "lon": lon2
-    })
+#     map_data.append({
+#         "city": c,
+#         "lat": lat2,
+#         "lon": lon2
+#     })
 
-if map_data:
+# if map_data:
 
-    map_df = pd.DataFrame(map_data)
+#     map_df = pd.DataFrame(map_data)
 
-    fig_map = px.scatter_mapbox(
-        map_df,
-        lat="lat",
-        lon="lon",
-        hover_name="city",
-        zoom=6,
-        height=400
-    )
+#     fig_map = px.scatter_mapbox(
+#         map_df,
+#         lat="lat",
+#         lon="lon",
+#         hover_name="city",
+#         zoom=6,
+#         height=400
+#     )
 
-    fig_map.update_layout(
-        mapbox_style="open-street-map",
-        margin=dict(l=0, r=0, t=0, b=0)
-    )
-    fig_map.update_traces(marker=dict(size=12))
+#     fig_map.update_layout(
+#         mapbox_style="open-street-map",
+#         margin=dict(l=0, r=0, t=0, b=0)
+#     )
+#     fig_map.update_traces(marker=dict(size=12))
 
-    st.plotly_chart(fig_map, use_container_width=True)
+#     st.plotly_chart(fig_map, use_container_width=True)
 
-else:
-    st.warning("Map data not available")
+# else:
+#     st.warning("Map data not available")
 
     if len(df_all["city"].unique()) < 2:
             st.warning("Limited nearby data available")
