@@ -296,7 +296,7 @@ if map_data:
 else:
     st.warning("Map data not available")
 
-        if len(df_all["city"].unique()) < 2:
+    if len(df_all["city"].unique()) < 2:
             st.warning("Limited nearby data available")
 
     else:
