@@ -196,43 +196,43 @@ if valid_city:
     # ---------------------------------------------------
     with tab3:
 
-    st.subheader("🌍 Nearby Cities Comparison")
+        st.subheader("🌍 Nearby Cities Comparison")
 
-    data_list = []
+        data_list = []
 
-    if valid_city:
-        base_city = city.title()
-        cities_to_compare = [base_city]
+        if valid_city:
+            base_city = city.title()
+            cities_to_compare = [base_city]
 
-        city_key = address.get("city", "").lower()
+            city_key = address.get("city", "").lower()
 
-        if city_key in nearby_map:
-            cities_to_compare += nearby_map[city_key]
+            if city_key in nearby_map:
+                cities_to_compare += nearby_map[city_key]
 
-    else:
-        # 🔥 fallback cities (when invalid input)
-        cities_to_compare = ["Ahmedabad", "Surat", "Vadodara", "Rajkot"]
+        else:
+            # 🔥 fallback cities (when invalid input)
+            cities_to_compare = ["Ahmedabad", "Surat", "Vadodara", "Rajkot"]
 
-    for c in cities_to_compare:
+        for c in cities_to_compare:
 
-        lat2, lon2, _ = get_coordinates(c)
+            lat2, lon2, _ = get_coordinates(c)
 
-        if lat2 is None:
-            continue
+            if lat2 is None:
+                continue
 
-        _, d = get_weather(lat2, lon2)
-        d["city"] = c
-        data_list.append(d)
+            _, d = get_weather(lat2, lon2)
+            d["city"] = c
+            data_list.append(d)
 
-    if data_list:
-        df_all = pd.concat(data_list)
+        if data_list:
+            df_all = pd.concat(data_list)
 
-        compare = px.line(
-            df_all,
-            x="date",
-            y="temp_max",
-            color="city",
-            height=400
+            compare = px.line(
+                df_all,
+                x="date",
+                y="temp_max",
+                color="city",
+                height=400
         )
 
         st.plotly_chart(compare, use_container_width=True)
