@@ -11,8 +11,44 @@ st.title("🌍 Weather Intelligence Dashboard")
 city = st.text_input("🔍 Enter City", placeholder="Ahmedabad")
 
 # ---------------------------------------------------
-# STRICT VALIDATION (FINAL FIX)
+# STRICT FUNCTION (FOR USER INPUT)
 # ---------------------------------------------------
+def get_coordinates(city):
+    geolocator = Nominatim(user_agent="weather_app")
+
+    location = geolocator.geocode(
+        city,
+        addressdetails=True,
+        exactly_one=True
+    )
+
+    if not location:
+        return None, None, None
+
+    address = location.raw.get("address", {})
+    display_name = location.raw.get("display_name", "").lower()
+
+    valid_keys = [
+        "city", "town", "village",
+        "municipality", "county", "state_district"
+    ]
+
+    if not any(k in address for k in valid_keys):
+        return None, None, None
+
+    if city.strip().lower() not in display_name:
+        return None, None, None
+
+    if location.raw.get("importance", 0) < 0.4:
+        return None, None, None
+
+    return location.latitude, location.longitude, address
+
+
+# ---------------------------------------------------
+# RELAXED FUNCTION (FOR NEARBY CITIES)
+# ---------------------------------------------------
+@st.cache_data
 def get_coordinates_relaxed(city):
     geolocator = Nominatim(user_agent="weather_app")
 
@@ -23,33 +59,7 @@ def get_coordinates_relaxed(city):
 
     return location.latitude, location.longitude
 
-    address = location.raw.get("address", {})
-    display_name = location.raw.get("display_name", "").lower()
 
-    # ✅ VALID CITY TYPES (FIXED INDENTATION)
-    valid_keys = [
-        "city",
-        "town",
-        "village",
-        "municipality",
-        "county",
-        "state_district"
-    ]
-
-    if not any(k in address for k in valid_keys):
-        return None, None, None
-
-    # ✅ STRICT MATCH
-    city_clean = city.strip().lower()
-
-    if city_clean not in display_name:
-        return None, None, None
-
-    # ✅ RELAXED IMPORTANCE (for Indian cities)
-    if location.raw.get("importance", 0) < 0.4:
-        return None, None, None
-
-    return location.latitude, location.longitude, address
 # ---------------------------------------------------
 # WEATHER API
 # ---------------------------------------------------
@@ -74,40 +84,37 @@ def get_weather(lat, lon):
 
     return data["current_weather"], df.head(7)
 
+
 # ---------------------------------------------------
-# NEARBY CITIES (STATIC INTELLIGENCE)
+# NEARBY MAP (BASE)
 # ---------------------------------------------------
 nearby_map = {
     "ahmedabad": ["Surat", "Vadodara", "Rajkot"],
-    "london": ["Manchester", "Birmingham", "Leeds"],
-    "new york": ["Boston", "Philadelphia", "Newark"]
+    "anand": ["Nadiad", "Vadodara", "Ahmedabad"],
+    "vapi": ["Valsad", "Daman", "Navsari"],
+    "navsari": ["Surat", "Valsad", "Vapi"]
 }
 
-# ---------------------------------------------------
-# MAIN
-# ---------------------------------------------------
-# ---------------------------------------------------
-# MAIN
-# ---------------------------------------------------
 
+# ---------------------------------------------------
+# MAIN LOGIC
+# ---------------------------------------------------
 lat, lon, address = None, None, None
 valid_city = False
 
 if city:
-
     lat, lon, address = get_coordinates(city)
 
     if lat is None:
-        st.error("❌ Invalid city. Showing default comparison instead.")
-        valid_city = False
+        st.error("❌ Invalid city. Showing fallback comparison.")
     else:
         valid_city = True
         current, df = get_weather(lat, lon)
 
-# ---------------------------------------------------
-# HOME PAGE (ONLY IF VALID)
-# ---------------------------------------------------
 
+# ---------------------------------------------------
+# HOME PAGE
+# ---------------------------------------------------
 if valid_city:
 
     st.subheader(f"📍 {city.title()}")
@@ -131,25 +138,27 @@ if valid_city:
                 f"Rain {df.loc[i, 'rain_prob']}%"
             )
 
-# ---------------------------------------------------
-# TABS (ALWAYS SHOW)
-# ---------------------------------------------------
 
+# ---------------------------------------------------
+# TABS
+# ---------------------------------------------------
 tab1, tab2, tab3 = st.tabs([
     "📊 Analytics",
     "📈 EDA",
     "🌍 Nearby Comparison"
 ])
-    # ---------------------------------------------------
-    # ANALYTICS
-    # ---------------------------------------------------
+
+
+# ---------------------------------------------------
+# ANALYTICS
+# ---------------------------------------------------
 with tab1:
 
     if valid_city:
 
         st.subheader("Temperature Trend")
 
-        fig = px.line(df, x="date", y=["temp_max","temp_min"], height=350)
+        fig = px.line(df, x="date", y=["temp_max", "temp_min"], height=350)
         st.plotly_chart(fig, use_container_width=True)
 
         df["temp_range"] = df["temp_max"] - df["temp_min"]
@@ -168,9 +177,11 @@ with tab1:
 
     else:
         st.info("Enter a valid city to see analytics")
-    # ---------------------------------------------------
-    # EDA
-    # ---------------------------------------------------
+
+
+# ---------------------------------------------------
+# EDA
+# ---------------------------------------------------
 with tab2:
 
     if valid_city:
@@ -193,55 +204,60 @@ with tab2:
 
         df["rolling_temp"] = df["temp_max"].rolling(3).mean()
 
-        rolling = px.line(df, x="date", y=["temp_max","rolling_temp"], height=300)
+        rolling = px.line(df, x="date", y=["temp_max", "rolling_temp"], height=300)
         st.plotly_chart(rolling, use_container_width=True)
 
     else:
         st.info("Enter a valid city to see EDA insights")
-    # ---------------------------------------------------
-    # NEARBY COMPARISON
-    # ---------------------------------------------------
+
+
+# ---------------------------------------------------
+# NEARBY COMPARISON
+# ---------------------------------------------------
 with tab3:
 
-        st.subheader("🌍 Nearby Cities Comparison")
+    st.subheader("🌍 Nearby Cities Comparison")
 
-        data_list = []
+    data_list = []
 
-        if valid_city:
-            base_city = city.title()
-            cities_to_compare = [base_city]
+    if valid_city:
+        base_city = city.title()
+        cities_to_compare = [base_city]
 
-            city_key = address.get("city", "").lower() if address else ""
+        city_key = address.get("city", "").lower() if address else ""
 
-            if city_key in nearby_map:
-                cities_to_compare += nearby_map[city_key]
+        if city_key in nearby_map:
+            cities_to_compare += nearby_map[city_key]
 
-        else:
-            # 🔥 fallback cities (when invalid input)
-            cities_to_compare = ["Ahmedabad", "Surat", "Vadodara", "Rajkot"]
+    else:
+        cities_to_compare = ["Ahmedabad", "Surat", "Vadodara", "Rajkot"]
 
-        for c in cities_to_compare:
+    for c in cities_to_compare:
 
-            lat2, lon2 = get_coordinates_relaxed(c)
+        lat2, lon2 = get_coordinates_relaxed(c)
 
-            if lat2 is None:
-                continue
+        if lat2 is None:
+            continue
 
-            _, d = get_weather(lat2, lon2)
-            d["city"] = c
-            data_list.append(d)
+        _, d = get_weather(lat2, lon2)
+        d["city"] = c
+        data_list.append(d)
 
-        if data_list:
-            df_all = pd.concat(data_list)
+    if data_list:
+        df_all = pd.concat(data_list)
 
-            compare = px.line(
-                df_all,
-                x="date",
-                y="temp_max",
-                color="city",
-                height=400
+        compare = px.line(
+            df_all,
+            x="date",
+            y="temp_max",
+            color="city",
+            height=400
         )
 
-            st.plotly_chart(compare, use_container_width=True)
-        else:
-            st.warning("No comparison data available")
+        st.plotly_chart(compare, use_container_width=True)
+
+        if len(df_all["city"].unique()) < 2:
+            st.warning("Limited nearby data available")
+
+    else:
+        st.warning("No comparison data available")
