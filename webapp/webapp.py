@@ -88,21 +88,30 @@ nearby_map = {
 # ---------------------------------------------------
 # MAIN
 # ---------------------------------------------------
+# ---------------------------------------------------
+# MAIN
+# ---------------------------------------------------
+
+lat, lon, address = None, None, None
+valid_city = False
+
 if city:
 
     lat, lon, address = get_coordinates(city)
 
-    valid_city = True
+    if lat is None:
+        st.error("❌ Invalid city. Showing default comparison instead.")
+        valid_city = False
+    else:
+        valid_city = True
+        current, df = get_weather(lat, lon)
 
-if lat is None:
-    st.error("❌ Invalid city. Showing default comparison instead.")
-    valid_city = False
+# ---------------------------------------------------
+# HOME PAGE (ONLY IF VALID)
+# ---------------------------------------------------
 
 if valid_city:
-    current, df = get_weather(lat, lon)
-# ---------------------------------------------------
-# HOME PAGE (CURRENT + FORECAST)
-# ---------------------------------------------------
+
     st.subheader(f"📍 {city.title()}")
 
     c1, c2, c3 = st.columns(3)
@@ -125,14 +134,14 @@ if valid_city:
             )
 
 # ---------------------------------------------------
-# TABS
+# TABS (ALWAYS SHOW)
 # ---------------------------------------------------
-    tab1, tab2, tab3 = st.tabs([
-        "📊 Analytics",
-        "📈 EDA",
-        "🌍 Nearby Comparison"
-    ])
 
+tab1, tab2, tab3 = st.tabs([
+    "📊 Analytics",
+    "📈 EDA",
+    "🌍 Nearby Comparison"
+])
     # ---------------------------------------------------
     # ANALYTICS
     # ---------------------------------------------------
@@ -204,7 +213,7 @@ if valid_city:
             base_city = city.title()
             cities_to_compare = [base_city]
 
-            city_key = address.get("city", "").lower()
+            city_key = address.get("city", "").lower() if address else ""
 
             if city_key in nearby_map:
                 cities_to_compare += nearby_map[city_key]
