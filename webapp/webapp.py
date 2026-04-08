@@ -92,12 +92,14 @@ if city:
 
     lat, lon, address = get_coordinates(city)
 
+    valid_city = True
+
     if lat is None:
-        st.error("❌ Enter a valid city name (No random text allowed)")
-        st.stop()
+        st.error("❌ Invalid city. Showing default comparison instead.")
+        valid_city = False
 
+    if valid_city:
     current, df = get_weather(lat, lon)
-
 # ---------------------------------------------------
 # HOME PAGE (CURRENT + FORECAST)
 # ---------------------------------------------------
@@ -194,31 +196,45 @@ if city:
     # ---------------------------------------------------
     with tab3:
 
+    st.subheader("🌍 Nearby Cities Comparison")
+
+    data_list = []
+
+    if valid_city:
+        base_city = city.title()
+        cities_to_compare = [base_city]
+
         city_key = address.get("city", "").lower()
 
         if city_key in nearby_map:
+            cities_to_compare += nearby_map[city_key]
 
-            all_cities = [city.title()] + nearby_map[city_key]
+    else:
+        # 🔥 fallback cities (when invalid input)
+        cities_to_compare = ["Ahmedabad", "Surat", "Vadodara", "Rajkot"]
 
-            data_list = []
+    for c in cities_to_compare:
 
-            for c in all_cities:
-                lat, lon, _ = get_coordinates(c)
-                _, d = get_weather(lat, lon)
-                d["city"] = c
-                data_list.append(d)
+        lat2, lon2, _ = get_coordinates(c)
 
-            df_all = pd.concat(data_list)
+        if lat2 is None:
+            continue
 
-            compare = px.line(
-                df_all,
-                x="date",
-                y="temp_max",
-                color="city",
-                height=400
-            )
+        _, d = get_weather(lat2, lon2)
+        d["city"] = c
+        data_list.append(d)
 
-            st.plotly_chart(compare, use_container_width=True)
+    if data_list:
+        df_all = pd.concat(data_list)
 
-        else:
-            st.info("Nearby comparison not available")
+        compare = px.line(
+            df_all,
+            x="date",
+            y="temp_max",
+            color="city",
+            height=400
+        )
+
+        st.plotly_chart(compare, use_container_width=True)
+    else:
+        st.warning("No comparison data available")
