@@ -13,17 +13,15 @@ city = st.text_input("🔍 Enter City", placeholder="Ahmedabad")
 # ---------------------------------------------------
 # STRICT VALIDATION (FINAL FIX)
 # ---------------------------------------------------
-def get_coordinates(city):
+def get_coordinates_relaxed(city):
     geolocator = Nominatim(user_agent="weather_app")
 
-    location = geolocator.geocode(
-        city,
-        addressdetails=True,
-        exactly_one=True
-    )
+    location = geolocator.geocode(city)
 
     if not location:
-        return None, None, None
+        return None, None
+
+    return location.latitude, location.longitude
 
     address = location.raw.get("address", {})
     display_name = location.raw.get("display_name", "").lower()
@@ -224,7 +222,7 @@ with tab3:
 
         for c in cities_to_compare:
 
-            lat2, lon2, _ = get_coordinates(c)
+            lat2, lon2 = get_coordinates_relaxed(c)
 
             if lat2 is None:
                 continue
