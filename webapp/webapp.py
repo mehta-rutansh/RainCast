@@ -147,6 +147,8 @@ tab1, tab2, tab3 = st.tabs([
     # ---------------------------------------------------
 with tab1:
 
+    if valid_city:
+
         st.subheader("Temperature Trend")
 
         fig = px.line(df, x="date", y=["temp_max","temp_min"], height=350)
@@ -154,12 +156,8 @@ with tab1:
 
         df["temp_range"] = df["temp_max"] - df["temp_min"]
 
-        st.subheader("Daily Temperature Variation")
-
         range_chart = px.area(df, x="date", y="temp_range", height=300)
         st.plotly_chart(range_chart, use_container_width=True)
-
-        st.subheader("Rain vs Temperature Pattern")
 
         combo = px.scatter(
             df,
@@ -170,15 +168,17 @@ with tab1:
         )
         st.plotly_chart(combo, use_container_width=True)
 
+    else:
+        st.info("Enter a valid city to see analytics")
     # ---------------------------------------------------
     # EDA
     # ---------------------------------------------------
 with tab2:
 
+    if valid_city:
+
         st.subheader("📊 Summary Statistics")
         st.dataframe(df.describe(), use_container_width=True)
-
-        st.subheader("🔥 Weather Extremes")
 
         hottest_day = df.loc[df["temp_max"].idxmax()]
         coldest_day = df.loc[df["temp_min"].idxmin()]
@@ -190,16 +190,16 @@ with tab2:
         col2.info(f"Coldest: {coldest_day['date']} ({coldest_day['temp_min']}°C)")
         col3.warning(f"Rainiest: {rainiest_day['date']} ({rainiest_day['rain_prob']}%)")
 
-        st.subheader("Temperature Distribution")
         hist = px.histogram(df, x="temp_max", height=300)
         st.plotly_chart(hist, use_container_width=True)
 
-        st.subheader("Rolling Trend")
         df["rolling_temp"] = df["temp_max"].rolling(3).mean()
 
         rolling = px.line(df, x="date", y=["temp_max","rolling_temp"], height=300)
         st.plotly_chart(rolling, use_container_width=True)
 
+    else:
+        st.info("Enter a valid city to see EDA insights")
     # ---------------------------------------------------
     # NEARBY COMPARISON
     # ---------------------------------------------------
