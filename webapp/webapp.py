@@ -236,5 +236,5 @@ if valid_city:
         )
 
         st.plotly_chart(compare, use_container_width=True)
-    else:
-        st.warning("No comparison data available")
+        else:
+            st.warning("No comparison data available")
