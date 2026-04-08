@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 from geopy.geocoders import Nominatim
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Weather Intelligence", layout="wide")
 
@@ -255,6 +256,45 @@ with tab3:
         )
 
         st.plotly_chart(compare, use_container_width=True)
+    st.subheader("🗺 Nearby Cities Map")
+
+map_data = []
+
+for c in cities_to_compare:
+
+    lat2, lon2 = get_coordinates_relaxed(c)
+
+    if lat2 is None:
+        continue
+
+    map_data.append({
+        "city": c,
+        "lat": lat2,
+        "lon": lon2
+    })
+
+if map_data:
+
+    map_df = pd.DataFrame(map_data)
+
+    fig_map = px.scatter_mapbox(
+        map_df,
+        lat="lat",
+        lon="lon",
+        hover_name="city",
+        zoom=6,
+        height=400
+    )
+
+    fig_map.update_layout(
+        mapbox_style="open-street-map",
+        margin=dict(l=0, r=0, t=0, b=0)
+    )
+
+    st.plotly_chart(fig_map, use_container_width=True)
+
+else:
+    st.warning("Map data not available")
 
         if len(df_all["city"].unique()) < 2:
             st.warning("Limited nearby data available")
