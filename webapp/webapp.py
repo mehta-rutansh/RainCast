@@ -290,6 +290,7 @@ if map_data:
         mapbox_style="open-street-map",
         margin=dict(l=0, r=0, t=0, b=0)
     )
+    fig_map.update_traces(marker=dict(size=12))
 
     st.plotly_chart(fig_map, use_container_width=True)
 
