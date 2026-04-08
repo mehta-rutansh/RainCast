@@ -94,11 +94,11 @@ if city:
 
     valid_city = True
 
-    if lat is None:
-        st.error("❌ Invalid city. Showing default comparison instead.")
-        valid_city = False
+if lat is None:
+    st.error("❌ Invalid city. Showing default comparison instead.")
+    valid_city = False
 
-    if valid_city:
+if valid_city:
     current, df = get_weather(lat, lon)
 # ---------------------------------------------------
 # HOME PAGE (CURRENT + FORECAST)
